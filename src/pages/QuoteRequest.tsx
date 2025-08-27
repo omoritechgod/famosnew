@@ -1,8 +1,8 @@
 "use client"
 
 import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useLocation } from "react-router-dom"
 import Layout from "@/components/layout/Layout"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,13 +12,16 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Trash2, FileText, Send, CheckCircle } from "lucide-react"
 import { toast } from "sonner"
+import { bookingService } from "@/services/bookingService"
+import { toApiPayload, makeGuestItemId } from "@/helpers/quote"
+import type { Urgency } from "@/types"
 
 interface ProductRow {
-  id: string
+  id: string | number | undefined
   code: string
   description: string
   quantity: number
-  currentPrice: string
+  current_price: string // Keep as string for form input, convert to number when submitting
 }
 
 interface QuoteFormData {
@@ -28,18 +31,24 @@ interface QuoteFormData {
   company: string
   products: ProductRow[]
   additionalRequirements: string
-  urgency: string
+  urgency: Urgency
 }
 
 const QuoteRequest = () => {
+  const location = useLocation()
+  const selectedProduct = location.state?.selectedProduct
+
+  console.log("QuoteRequest - Location state:", location.state)
+  console.log("QuoteRequest - Selected product:", selectedProduct)
+
   const [formData, setFormData] = useState<QuoteFormData>({
     customerName: "",
     email: "",
     phone: "",
     company: "",
     products: [
-      { id: "1", code: "", description: "", quantity: 1, currentPrice: "" },
-      { id: "2", code: "", description: "", quantity: 1, currentPrice: "" },
+      { id: undefined, code: "", description: "", quantity: 1, current_price: "" },
+      { id: undefined, code: "", description: "", quantity: 1, current_price: "" },
     ],
     additionalRequirements: "",
     urgency: "standard",
@@ -47,30 +56,61 @@ const QuoteRequest = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleInputChange = (field: keyof QuoteFormData, value: string) => {
+  // Pre-fill form if product was selected
+  useEffect(() => {
+    if (selectedProduct) {
+      console.log("Pre-filling form with selected product:", selectedProduct)
+
+      setFormData((prev) => ({
+        ...prev,
+        products: [
+          {
+            id: selectedProduct.id, // Use actual product ID from catalog
+            code: selectedProduct.code || `PROD-${selectedProduct.id.toString().padStart(3, "0")}`,
+            description: `${selectedProduct.name} - ${selectedProduct.description}`,
+            quantity: 1,
+            current_price: selectedProduct.price ? selectedProduct.price.toString() : "",
+          },
+          ...prev.products.slice(1), // Keep the rest of the existing products
+        ],
+      }))
+
+      toast.success(`Product "${selectedProduct.name}" has been added to your quote request`)
+    }
+  }, [selectedProduct])
+
+  const handleInputChange = (field: keyof QuoteFormData, value: string | Urgency) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handleProductChange = (id: string, field: keyof ProductRow, value: string | number) => {
+  const handleProductChange = (index: number, field: keyof ProductRow, value: string | number) => {
     setFormData((prev) => ({
       ...prev,
-      products: prev.products.map((product) => (product.id === id ? { ...product, [field]: value } : product)),
+      products: prev.products.map((product, i) => (i === index ? { ...product, [field]: value } : product)),
     }))
   }
 
   const addProductRow = () => {
-    const newId = Date.now().toString()
     setFormData((prev) => ({
       ...prev,
-      products: [...prev.products, { id: newId, code: "", description: "", quantity: 1, currentPrice: "" }],
+      products: [
+        ...prev.products,
+        {
+          id: makeGuestItemId(), // Generate guest ID for new products
+          code: "",
+          description: "",
+          quantity: 1,
+          current_price: "",
+        },
+      ],
     }))
   }
 
-  const removeProductRow = (id: string) => {
+  const removeProductRow = (index: number) => {
     if (formData.products.length > 1) {
       setFormData((prev) => ({
         ...prev,
-        products: prev.products.filter((product) => product.id !== id),
+        products: prev.products.filter((_, i) => i !== index),
       }))
     }
   }
@@ -80,52 +120,82 @@ const QuoteRequest = () => {
     setIsSubmitting(true)
 
     try {
-      // Create detailed email content
-      const productsList = formData.products
-        .filter((product) => product.description.trim() !== "")
-        .map(
-          (product, index) =>
-            `${index + 1}. Product Code: ${product.code || "N/A"}\n   Description: ${product.description}\n   Quantity: ${product.quantity}\n   Current Price: ${product.currentPrice || "N/A"}`,
-        )
-        .join("\n\n")
+      // Validate required fields
+      if (!formData.customerName.trim()) {
+        toast.error("Customer name is required")
+        return
+      }
+      if (!formData.email.trim()) {
+        toast.error("Email is required")
+        return
+      }
+      if (!formData.phone.trim()) {
+        toast.error("Phone number is required")
+        return
+      }
 
-      const emailBody =
-        `QUOTE REQUEST\n\n` +
-        `Customer Information:\n` +
-        `Name: ${formData.customerName}\n` +
-        `Email: ${formData.email}\n` +
-        `Phone: ${formData.phone}\n` +
-        `Company: ${formData.company || "N/A"}\n\n` +
-        `Products Requested:\n${productsList}\n\n` +
-        `Additional Requirements:\n${formData.additionalRequirements || "None specified"}\n\n` +
-        `Urgency: ${formData.urgency}\n\n` +
-        `Please provide a detailed quote for the above items including:\n` +
-        `- Unit prices and total cost\n` +
-        `- Availability and delivery timeframes\n` +
-        `- Payment terms and conditions\n` +
-        `- Technical specifications (if applicable)`
+      // Filter out empty products and validate
+      const validProducts = formData.products.filter((product) => product.description.trim() !== "")
 
-      const mailtoLink = `mailto:support@famousitsolutionltd.com?subject=Quote Request from ${formData.customerName}&body=${encodeURIComponent(emailBody)}`
+      if (validProducts.length === 0) {
+        toast.error("At least one product description is required")
+        return
+      }
 
-      window.location.href = mailtoLink
-
-      toast.success("Email client opened with your quote request. Please send the email to complete your request.")
-
-      // Reset form
-      setFormData({
-        customerName: "",
-        email: "",
-        phone: "",
-        company: "",
-        products: [
-          { id: "1", code: "", description: "", quantity: 1, currentPrice: "" },
-          { id: "2", code: "", description: "", quantity: 1, currentPrice: "" },
-        ],
-        additionalRequirements: "",
-        urgency: "standard",
+      // Prepare data using the helper function
+      const apiData = toApiPayload({
+        customerName: formData.customerName,
+        email: formData.email,
+        phone: formData.phone,
+        company: formData.company,
+        additionalRequirements: formData.additionalRequirements,
+        urgency: formData.urgency,
+        products: validProducts.map((product) => ({
+          id: product.id, // Will be handled by toApiPayload
+          code: product.code,
+          description: product.description,
+          quantity: product.quantity,
+          current_price: product.current_price,
+        })),
       })
-    } catch (error) {
-      toast.error("Failed to open email client. Please try again.")
+
+      console.log("Submitting quote request:", apiData)
+
+      // Submit to API using bookingService
+      const result = await bookingService.submitQuoteRequest(apiData)
+
+      console.log("Quote submission result:", result)
+
+      if (result.message && result.quote_id) {
+        toast.success(
+          `Quote request submitted successfully! Quote ID: ${result.quote_id}. We'll contact you within 24 hours.`,
+        )
+
+        // Reset form
+        setFormData({
+          customerName: "",
+          email: "",
+          phone: "",
+          company: "",
+          products: [
+            { id: undefined, code: "", description: "", quantity: 1, current_price: "" },
+            { id: undefined, code: "", description: "", quantity: 1, current_price: "" },
+          ],
+          additionalRequirements: "",
+          urgency: "standard",
+        })
+      } else {
+        toast.error("Unexpected response format. Please try again.")
+      }
+    } catch (error: any) {
+      console.error("Quote submission error:", error)
+
+      // Try to parse error response
+      if (error.message.includes("HTTP error")) {
+        toast.error("Failed to submit quote request. Please check your connection and try again.")
+      } else {
+        toast.error(`Failed to submit quote request: ${error.message}`)
+      }
     } finally {
       setIsSubmitting(false)
     }
@@ -145,6 +215,13 @@ const QuoteRequest = () => {
               Get personalized pricing for your IT hardware and software requirements. Our team will provide you with
               competitive quotes within 24 hours.
             </p>
+            {selectedProduct && (
+              <div className="mt-6 p-4 bg-white/10 rounded-lg">
+                <p className="text-sm">
+                  <strong>Selected Product:</strong> {selectedProduct.name}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -163,8 +240,8 @@ const QuoteRequest = () => {
                   <ul className="text-sm text-muted-foreground space-y-1">
                     <li>• Fill out the form below with your requirements</li>
                     <li>• Add multiple products using the "Add Product" button</li>
-                    <li>• Submit your request and we'll email you a detailed quote</li>
-                    <li>• Our team will contact you within 24 hours with pricing and availability</li>
+                    <li>• Submit your request and we'll contact you within 24 hours</li>
+                    <li>• Our team will provide detailed pricing and availability</li>
                   </ul>
                 </div>
               </div>
@@ -210,7 +287,7 @@ const QuoteRequest = () => {
                       type="tel"
                       value={formData.phone}
                       onChange={(e) => handleInputChange("phone", e.target.value)}
-                      placeholder="+234 814 531 9706"
+                      placeholder="+234 xxx xxx xxxx"
                       required
                     />
                   </div>
@@ -257,7 +334,7 @@ const QuoteRequest = () => {
 
                   {/* Product Rows */}
                   {formData.products.map((product, index) => (
-                    <div key={product.id} className="space-y-4 md:space-y-0">
+                    <div key={index} className="space-y-4 md:space-y-0">
                       {/* Mobile Layout */}
                       <div className="md:hidden space-y-4 p-4 border rounded-lg">
                         <div className="flex items-center justify-between">
@@ -267,7 +344,7 @@ const QuoteRequest = () => {
                               type="button"
                               variant="ghost"
                               size="sm"
-                              onClick={() => removeProductRow(product.id)}
+                              onClick={() => removeProductRow(index)}
                               className="text-destructive hover:text-destructive"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -280,7 +357,7 @@ const QuoteRequest = () => {
                             <Label className="text-xs">Product Code (if known)</Label>
                             <Input
                               value={product.code}
-                              onChange={(e) => handleProductChange(product.id, "code", e.target.value)}
+                              onChange={(e) => handleProductChange(index, "code", e.target.value)}
                               placeholder="e.g., HP-DL380-G10"
                               className="mt-1"
                             />
@@ -290,7 +367,7 @@ const QuoteRequest = () => {
                             <Label className="text-xs">Product Description *</Label>
                             <Textarea
                               value={product.description}
-                              onChange={(e) => handleProductChange(product.id, "description", e.target.value)}
+                              onChange={(e) => handleProductChange(index, "description", e.target.value)}
                               placeholder="Describe the product you need..."
                               rows={2}
                               className="mt-1"
@@ -306,7 +383,7 @@ const QuoteRequest = () => {
                                 min="1"
                                 value={product.quantity}
                                 onChange={(e) =>
-                                  handleProductChange(product.id, "quantity", Number.parseInt(e.target.value) || 1)
+                                  handleProductChange(index, "quantity", Number.parseInt(e.target.value) || 1)
                                 }
                                 className="mt-1"
                                 required
@@ -315,9 +392,12 @@ const QuoteRequest = () => {
                             <div>
                               <Label className="text-xs">Current Price</Label>
                               <Input
-                                value={product.currentPrice}
-                                onChange={(e) => handleProductChange(product.id, "currentPrice", e.target.value)}
-                                placeholder="$0.00"
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={product.current_price}
+                                onChange={(e) => handleProductChange(index, "current_price", e.target.value)}
+                                placeholder="0.00"
                                 className="mt-1"
                               />
                             </div>
@@ -330,7 +410,7 @@ const QuoteRequest = () => {
                         <div className="col-span-2">
                           <Input
                             value={product.code}
-                            onChange={(e) => handleProductChange(product.id, "code", e.target.value)}
+                            onChange={(e) => handleProductChange(index, "code", e.target.value)}
                             placeholder="Product code"
                           />
                         </div>
@@ -338,7 +418,7 @@ const QuoteRequest = () => {
                         <div className="col-span-4">
                           <Textarea
                             value={product.description}
-                            onChange={(e) => handleProductChange(product.id, "description", e.target.value)}
+                            onChange={(e) => handleProductChange(index, "description", e.target.value)}
                             placeholder="Describe the product you need..."
                             rows={2}
                             required
@@ -351,7 +431,7 @@ const QuoteRequest = () => {
                             min="1"
                             value={product.quantity}
                             onChange={(e) =>
-                              handleProductChange(product.id, "quantity", Number.parseInt(e.target.value) || 1)
+                              handleProductChange(index, "quantity", Number.parseInt(e.target.value) || 1)
                             }
                             required
                           />
@@ -359,9 +439,12 @@ const QuoteRequest = () => {
 
                         <div className="col-span-3">
                           <Input
-                            value={product.currentPrice}
-                            onChange={(e) => handleProductChange(product.id, "currentPrice", e.target.value)}
-                            placeholder="$0.00 (optional)"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={product.current_price}
+                            onChange={(e) => handleProductChange(index, "current_price", e.target.value)}
+                            placeholder="0.00 (optional)"
                           />
                         </div>
 
@@ -371,7 +454,7 @@ const QuoteRequest = () => {
                               type="button"
                               variant="ghost"
                               size="sm"
-                              onClick={() => removeProductRow(product.id)}
+                              onClick={() => removeProductRow(index)}
                               className="text-destructive hover:text-destructive"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -393,7 +476,10 @@ const QuoteRequest = () => {
               <CardContent className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="urgency">Project Urgency</Label>
-                  <Select value={formData.urgency} onValueChange={(value) => handleInputChange("urgency", value)}>
+                  <Select
+                    value={formData.urgency}
+                    onValueChange={(value: Urgency) => handleInputChange("urgency", value)}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select urgency level" />
                     </SelectTrigger>
@@ -434,7 +520,7 @@ const QuoteRequest = () => {
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? (
-                      "Sending Request..."
+                      "Submitting Request..."
                     ) : (
                       <>
                         <Send className="mr-2 h-4 w-4" />

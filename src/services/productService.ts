@@ -19,23 +19,23 @@ export const productService = {
       }
     })
 
-    const endpoint = `/products${queryParams.toString() ? `?${queryParams.toString()}` : ""}`
+    const endpoint = `/api/products${queryParams.toString() ? `?${queryParams.toString()}` : ""}`
     return apiService.get<ProductsResponse>(endpoint)
   },
 
   async getProduct(id: number): Promise<Product> {
-    return apiService.get<Product>(`/products/${id}`)
+    return apiService.get<Product>(`/api/products/${id}`)
   },
 
   async searchProducts(query: string): Promise<Product[]> {
-    return apiService.get<Product[]>(`/products/search?q=${encodeURIComponent(query)}`)
+    return apiService.get<Product[]>(`/api/products/search?q=${encodeURIComponent(query)}`)
   },
 
   async getProductsByCategory(category: string): Promise<Product[]> {
-    return apiService.get<Product[]>(`/products/category/${encodeURIComponent(category)}`)
+    return apiService.get<Product[]>(`/api/products/category/${encodeURIComponent(category)}`)
   },
 
   async getFeaturedProducts(): Promise<Product[]> {
-    return apiService.get<Product[]>("/products/featured")
+    return apiService.get<Product[]>("/api/products/featured")
   },
 }

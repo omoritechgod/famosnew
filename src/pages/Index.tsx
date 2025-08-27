@@ -1,16 +1,16 @@
-import Layout from "@/components/layout/Layout"
-import HeroSection from "@/components/home/HeroSection"
-import AboutSection from "@/components/home/AboutSection"
-import ServicesSection from "@/components/home/ServicesSection"
-import FeaturedProducts from "@/components/home/FeaturedProducts"
-import TeamSection from "@/components/home/TeamSection"
-import TestimonialsSection from "@/components/home/TestimonialsSection"
-import ProjectsSection from "@/components/home/ProjectsSection"
+import Layout from '@/components/layout/Layout';
+import HeroCarousel from '@/components/home/HeroCarousel';
+import AboutSection from '@/components/home/AboutSection';
+import ServicesSection from '@/components/home/ServicesSection';
+import FeaturedProducts from '@/components/home/FeaturedProducts';
+import ProjectsSection from '@/components/home/ProjectsSection';
+import TeamSection from '@/components/home/TeamSection';
+import TestimonialsSection from '@/components/home/TestimonialsSection';
 
 const Index = () => {
   return (
     <Layout>
-      <HeroSection />
+      <HeroCarousel />
       <AboutSection />
       <ServicesSection />
       <FeaturedProducts />
@@ -18,7 +18,7 @@ const Index = () => {
       <TeamSection />
       <TestimonialsSection />
     </Layout>
-  )
-}
+  );
+};
 
-export default Index
+export default Index;

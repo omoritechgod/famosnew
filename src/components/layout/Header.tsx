@@ -13,7 +13,7 @@ const Header = () => {
     { name: "Home", href: "/" },
     { name: "About", href: "/about" },
     { name: "Services", href: "/services" },
-    { name: "Products", href: "/products" },
+    { name: "Shopping", href: "/products" },
     { name: "Contact", href: "/contact" },
   ]
 
@@ -28,11 +28,11 @@ const Header = () => {
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
                 <Phone className="h-4 w-4" />
-                <span>+234 814 531 9706</span>
+                <span>0814 531 9706</span>
               </div>
               <div className="flex items-center space-x-2">
                 <Mail className="h-4 w-4" />
-                <span>support@famousitsolutionltd.com</span>
+                <span>info@famousitsolutionltd.com</span>
               </div>
             </div>
             <div className="hidden md:block">
@@ -47,11 +47,11 @@ const Header = () => {
         <div className="flex justify-between items-center py-4">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-3">
-            <img src="/src/assets/logo.png" alt="FAMOS IT Solutions" className="h-19 w-20" />
-            <div>
-              {/* <h1 className="text-xl font-bold text-primary">FAMOS</h1>
-              <p className="text-xs text-muted-foreground">IT Solutions</p> */}
-            </div>
+          <img src="/logo1.png" alt="FAMOS IT Solutions" className="h-19 w-20" />
+            {/* <div>
+              <h1 className="text-xl font-bold text-primary">FAMOS</h1>
+              <p className="text-xs text-muted-foreground">IT Solutions</p>
+            </div> */}
           </Link>
 
           {/* Desktop Navigation */}

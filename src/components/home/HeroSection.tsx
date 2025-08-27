@@ -1,42 +1,50 @@
-import { Button } from "@/components/ui/button"
-import { ArrowRight, Play } from "lucide-react"
-import { Link } from "react-router-dom"
+import { Button } from '@/components/ui/button';
+import { ArrowRight, ChevronLeft, ChevronRight, Star, Play } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import carousel1 from '@/assets/carousel-1.jpg';
+import carousel2 from '@/assets/carousel-2.jpg';
 
 const HeroSection = () => {
   return (
-    <section className="relative bg-gradient-hero text-white py-20 overflow-hidden">
+    <section className="relative overflow-hidden bg-gradient-hero text-white">
       {/* Background Pattern */}
-      <div className="absolute inset-0 bg-black/20"></div>
-
-      <div className="container px-4 relative z-10">
+      <div className="absolute inset-0 bg-grid-white/[0.05] bg-[size:60px_60px]" />
+      
+      <div className="container relative px-4 py-24 md:py-32">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Content */}
           <div className="space-y-8">
             <div className="space-y-4">
-              <div className="inline-flex items-center bg-white/10 text-white px-3 py-1 rounded-full text-sm font-medium">
-                 Enterprise IT Solutions
+              <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-2 text-sm">
+                <Star className="h-4 w-4 fill-current" />
+                <span>Trusted by 10,000+ customers</span>
               </div>
+              
               <h1 className="text-4xl md:text-6xl font-bold leading-tight">
-                Empowering Your Business with
-                <span className="block text-yellow-400">Smart IT Solutions</span>
+                Premium Booking &{' '}
+                <span className="bg-gradient-accent bg-clip-text text-transparent">
+                  Product Services
+                </span>
               </h1>
+              
               <p className="text-xl text-white/80 max-w-lg">
-                From hardware procurement to managed services, we provide comprehensive IT solutions that drive
-                innovation and growth for businesses across Nigeria.
+                Experience seamless booking and discover premium products tailored to your needs. 
+                Quality, convenience, and excellence in every interaction.
               </p>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4">
-              <Link to="/services">
-                <Button size="lg" className="bg-white text-primary hover:bg-white/90 group">
-                  Explore Services
-                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </Link>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-white/20 text-white hover:bg-white/10 bg-transparent"
+              <Button 
+                size="lg" 
+                className="bg-white text-primary hover:bg-white/90 shadow-button group"
+              >
+                Book Now
+                <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              </Button>
+              <Button 
+                size="lg" 
+                variant="outline" 
+                className="border-white/20 text-white hover:bg-white/10"
               >
                 <Play className="mr-2 h-4 w-4" />
                 Watch Demo
@@ -44,45 +52,56 @@ const HeroSection = () => {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-3 gap-8 pt-8">
-              <div>
-                <div className="text-3xl font-bold">500+</div>
-                <div className="text-white/60 text-sm">Projects Completed</div>
+            <div className="grid grid-cols-3 gap-6 pt-8">
+              <div className="text-center">
+                <div className="text-2xl font-bold">10K+</div>
+                <div className="text-sm text-white/60">Happy Customers</div>
               </div>
-              <div>
-                <div className="text-3xl font-bold">50+</div>
-                <div className="text-white/60 text-sm">Happy Clients</div>
+              <div className="text-center">
+                <div className="text-2xl font-bold">500+</div>
+                <div className="text-sm text-white/60">Products</div>
               </div>
-              <div>
-                <div className="text-3xl font-bold">24/7</div>
-                <div className="text-white/60 text-sm">Support Available</div>
+              <div className="text-center">
+                <div className="text-2xl font-bold">99%</div>
+                <div className="text-sm text-white/60">Satisfaction</div>
               </div>
             </div>
           </div>
 
-          {/* Hero Image */}
+          {/* Hero Image/Visual */}
           <div className="relative">
-            <div className="aspect-square bg-white/10 rounded-2xl p-8 backdrop-blur-sm">
-              <img
-                src="/src/assets/carousel-1.jpg"
-                alt="IT Solutions"
-                className="w-full h-full object-cover rounded-lg"
-              />
+            <div className="relative rounded-2xl bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm border border-white/20 p-8">
+              {/* Placeholder for hero image */}
+              <div className="aspect-square bg-gradient-to-br from-accent to-accent/70 rounded-xl flex items-center justify-center">
+                <div className="text-center text-white">
+                  <div className="text-6xl mb-4">🎯</div>
+                  <p className="text-lg font-medium">Premium Experience</p>
+                </div>
+              </div>
+              
+              {/* Floating elements */}
+              <div className="absolute -top-4 -left-4 bg-accent rounded-full p-3 shadow-elegant">
+                <Star className="h-6 w-6 text-white fill-current" />
+              </div>
+              <div className="absolute -bottom-4 -right-4 bg-white rounded-full p-3 shadow-elegant">
+                <ArrowRight className="h-6 w-6 text-primary" />
+              </div>
             </div>
-            {/* Floating Elements */}
-            <div className="absolute -top-4 -right-4 bg-yellow-400 text-black p-4 rounded-lg shadow-lg">
-              <div className="text-sm font-semibold">Enterprise Grade</div>
-              <div className="text-xs">Security & Reliability</div>
-            </div>
-            <div className="absolute -bottom-4 -left-4 bg-white text-primary p-4 rounded-lg shadow-lg">
-              <div className="text-sm font-semibold">24/7 Support</div>
-              <div className="text-xs">Always Available</div>
-            </div>
+            
+            {/* Background glow */}
+            <div className="absolute inset-0 bg-accent/20 rounded-2xl blur-3xl -z-10" />
           </div>
         </div>
       </div>
-    </section>
-  )
-}
 
-export default HeroSection
+      {/* Bottom curve */}
+      <div className="absolute bottom-0 left-0 right-0">
+        <svg viewBox="0 0 1200 120" preserveAspectRatio="none" className="w-full h-12 fill-background">
+          <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z"></path>
+        </svg>
+      </div>
+    </section>
+  );
+};
+
+export default HeroSection;

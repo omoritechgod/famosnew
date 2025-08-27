@@ -9,22 +9,43 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Mail, Phone, MapPin, Clock, Send, MessageCircle } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  MapPin,
+  Phone,
+  Mail,
+  Clock,
+  MessageCircle,
+  Send,
+  Facebook,
+  Instagram,
+  Twitter,
+  Youtube,
+  Linkedin,
+} from "lucide-react"
 import { toast } from "sonner"
+import { bookingService } from "@/services/bookingService"
+
+interface ContactFormData {
+  name: string
+  email: string
+  phone: string
+  subject: string
+  message: string
+}
 
 const Contact = () => {
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ContactFormData>({
     name: "",
     email: "",
     phone: "",
     subject: "",
     message: "",
   })
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
+  const handleInputChange = (field: keyof ContactFormData, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -32,15 +53,19 @@ const Contact = () => {
     setIsSubmitting(true)
 
     try {
-      // Create mailto link
-      const mailtoLink = `mailto:support@famousitsolutionltd.com?subject=${encodeURIComponent(formData.subject)}&body=${encodeURIComponent(
-        `Name: ${formData.name}\nEmail: ${formData.email}\nPhone: ${formData.phone}\n\nMessage:\n${formData.message}`,
-      )}`
-
-      window.location.href = mailtoLink
-
-      toast.success("Email client opened with your message. Please send the email to complete your request.")
-
+      const response = await bookingService.submitContactForm(formData);
+      // If the response contains a success message, show it
+      if (response.success) {
+        toast.success( response.message || "Your message has been sent successfully!")
+      } else {
+        toast.error(response.message || "Failed to send message, check your parameters and try again.")
+      }
+      
+    } catch (error) {
+      toast.error("Failed to open email client, check your internet connection and try again.")
+    } finally {
+      setIsSubmitting(false);
+      // Reset form data after submission
       setFormData({
         name: "",
         email: "",
@@ -48,43 +73,68 @@ const Contact = () => {
         subject: "",
         message: "",
       })
-    } catch (error) {
-      toast.error("Failed to open email client. Please try again.")
-    } finally {
-      setIsSubmitting(false)
     }
   }
 
   const contactInfo = [
     {
-      icon: Mail,
-      title: "Email Us",
-      content: "support@famousitsolutionltd.com",
-      description: "Send us an email anytime",
+      icon: MapPin,
+      title: "Office Address",
+      details: ["Lagos, Nigeria", "West Africa"],
+      color: "text-blue-600",
     },
     {
       icon: Phone,
-      title: "Call Us",
-      content: "0814 531 9706 / 0706 650 0878",
-      description: "Mon-Fri from 8am to 5pm",
+      title: "Phone Numbers",
+      details: ["0814 531 9706"],
+      color: "text-green-600",
     },
     {
-      icon: MapPin,
-      title: "Visit Us",
-      content: "Lagos, Nigeria",
-      description: "Our main office location",
+      icon: Mail,
+      title: "Email Address",
+      details: ["info@famousitsolutionltd.com"],
+      color: "text-purple-600",
     },
     {
       icon: Clock,
       title: "Business Hours",
-      content: "Mon-Fri: 8am-5pm",
-      description: "We're here to help",
+      details: ["Mon - Fri: 8:00 AM - 5:00 PM", "Weekend: By Appointment"],
+      color: "text-orange-600",
     },
   ]
 
-  const handleWhatsAppClick = () => {
-    window.open("https://wa.me/2348145319706", "_blank")
-  }
+  const socialLinks = [
+    {
+      name: "Facebook",
+      href: "https://www.facebook.com/profile.php?id=61576075276143&mibextid=ZbWKwL",
+      icon: Facebook,
+      color: "hover:bg-blue-600",
+    },
+    {
+      name: "Instagram",
+      href: "https://www.instagram.com/famositconsultancy?igsh=MXdtZG9sbGQ1aDVz",
+      icon: Instagram,
+      color: "hover:bg-pink-600",
+    },
+    {
+      name: "X (Twitter)",
+      href: "https://x.com/famosits?s=11",
+      icon: Twitter,
+      color: "hover:bg-black",
+    },
+    {
+      name: "YouTube",
+      href: "https://www.youtube.com/@FamosConsultancyandITSolutions",
+      icon: Youtube,
+      color: "hover:bg-red-600",
+    },
+    {
+      name: "LinkedIn",
+      href: "https://www.linkedin.com/company/famos-consultancy-and-it-solutions-ltd/",
+      icon: Linkedin,
+      color: "hover:bg-blue-700",
+    },
+  ]
 
   return (
     <Layout>
@@ -92,42 +142,99 @@ const Contact = () => {
       <section className="bg-gradient-hero text-white py-16">
         <div className="container px-4">
           <div className="text-center max-w-3xl mx-auto">
-            <h1 className="text-4xl md:text-5xl font-bold mb-6">Get in Touch</h1>
+            <div className="inline-flex items-center bg-white/10 text-white px-3 py-1 rounded-full text-sm font-medium mb-6">
+              📞 Get In Touch
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold mb-6">Contact Us</h1>
             <p className="text-xl text-white/80">
-              Have questions? We'd love to hear from you. Send us a message and we'll respond as soon as possible.
+              Ready to transform your business with cutting-edge IT solutions? We're here to help you every step of the
+              way.
             </p>
           </div>
         </div>
       </section>
 
-      {/* Contact Info Cards */}
-      <section className="py-16 bg-muted/50">
-        <div className="container px-4">
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {contactInfo.map((info, index) => {
-              const IconComponent = info.icon
-              return (
-                <Card key={index} className="text-center p-6 hover:shadow-card-hover transition-all duration-300">
-                  <CardContent className="p-0">
-                    <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-primary rounded-lg mb-4">
-                      <IconComponent className="h-6 w-6 text-white" />
-                    </div>
-                    <h3 className="font-semibold text-lg mb-2">{info.title}</h3>
-                    <p className="font-medium text-primary mb-1 text-sm">{info.content}</p>
-                    <p className="text-sm text-muted-foreground">{info.description}</p>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
-        </div>
-      </section>
+      <div className="container px-4 py-16">
+        <div className="grid lg:grid-cols-3 gap-12">
+          {/* Contact Information */}
+          <div className="lg:col-span-1 space-y-8">
+            <div>
+              <h2 className="text-2xl font-bold mb-6">Get in Touch</h2>
+              <p className="text-muted-foreground mb-8">
+                Have questions about our services? Need a custom quote? Our team is ready to provide you with expert
+                guidance and support.
+              </p>
+            </div>
 
-      {/* Contact Form & Map */}
-      <section className="py-16">
-        <div className="container px-4">
-          <div className="grid lg:grid-cols-2 gap-12">
-            {/* Contact Form */}
+            {/* Contact Details */}
+            <div className="space-y-6">
+              {contactInfo.map((info, index) => {
+                const IconComponent = info.icon
+                return (
+                  <div key={index} className="flex items-start space-x-4">
+                    <div className={`p-3 rounded-lg bg-gray-100 ${info.color}`}>
+                      <IconComponent className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold mb-1">{info.title}</h3>
+                      {info.details.map((detail, idx) => (
+                        <p key={idx} className="text-muted-foreground text-sm">
+                          {detail}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* WhatsApp */}
+            <Card className="border-green-200 bg-green-50">
+              <CardContent className="p-6">
+                <div className="flex items-center space-x-3 mb-3">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <MessageCircle className="h-5 w-5 text-green-600" />
+                  </div>
+                  <h3 className="font-semibold">WhatsApp Support</h3>
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Get instant support via WhatsApp. Available 24/7 for urgent inquiries.
+                </p>
+                <Button
+                  className="w-full bg-green-600 hover:bg-green-700"
+                  onClick={() => window.open("https://wa.me/2348145319706", "_blank")}
+                >
+                  <MessageCircle className="mr-2 h-4 w-4" />
+                  Chat on WhatsApp
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Social Media */}
+            <div>
+              <h3 className="font-semibold mb-4">Follow Us</h3>
+              <div className="flex space-x-3">
+                {socialLinks.map((social) => {
+                  const IconComponent = social.icon
+                  return (
+                    <a
+                      key={social.name}
+                      href={social.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`p-3 bg-gray-100 hover:text-white rounded-lg transition-all duration-200 ${social.color}`}
+                      aria-label={social.name}
+                    >
+                      <IconComponent className="h-5 w-5" />
+                    </a>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Contact Form */}
+          <div className="lg:col-span-2">
             <Card>
               <CardHeader>
                 <CardTitle className="text-2xl">Send us a Message</CardTitle>
@@ -142,9 +249,8 @@ const Contact = () => {
                       <Label htmlFor="name">Full Name *</Label>
                       <Input
                         id="name"
-                        name="name"
                         value={formData.name}
-                        onChange={handleInputChange}
+                        onChange={(e) => handleInputChange("name", e.target.value)}
                         placeholder="Your full name"
                         required
                       />
@@ -153,10 +259,9 @@ const Contact = () => {
                       <Label htmlFor="email">Email Address *</Label>
                       <Input
                         id="email"
-                        name="email"
                         type="email"
                         value={formData.email}
-                        onChange={handleInputChange}
+                        onChange={(e) => handleInputChange("email", e.target.value)}
                         placeholder="your@email.com"
                         required
                       />
@@ -168,23 +273,28 @@ const Contact = () => {
                       <Label htmlFor="phone">Phone Number</Label>
                       <Input
                         id="phone"
-                        name="phone"
                         type="tel"
                         value={formData.phone}
-                        onChange={handleInputChange}
-                        placeholder="+234 814 531 9706"
+                        onChange={(e) => handleInputChange("phone", e.target.value)}
+                        placeholder="+234 xxx xxx xxxx"
                       />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="subject">Subject *</Label>
-                      <Input
-                        id="subject"
-                        name="subject"
-                        value={formData.subject}
-                        onChange={handleInputChange}
-                        placeholder="How can we help?"
-                        required
-                      />
+                      <Select value={formData.subject} onValueChange={(value) => handleInputChange("subject", value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a subject" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="general">General Inquiry</SelectItem>
+                          <SelectItem value="quote">Request Quote</SelectItem>
+                          <SelectItem value="support">Technical Support</SelectItem>
+                          <SelectItem value="partnership">Partnership</SelectItem>
+                          <SelectItem value="procurement">Hardware Procurement</SelectItem>
+                          <SelectItem value="managed-services">Managed Services</SelectItem>
+                          <SelectItem value="logistics">Logistics Support</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
@@ -192,18 +302,22 @@ const Contact = () => {
                     <Label htmlFor="message">Message *</Label>
                     <Textarea
                       id="message"
-                      name="message"
                       value={formData.message}
-                      onChange={handleInputChange}
-                      placeholder="Tell us more about your inquiry..."
+                      onChange={(e) => handleInputChange("message", e.target.value)}
+                      placeholder="Tell us about your project or inquiry..."
                       rows={6}
                       required
                     />
                   </div>
 
-                  <Button type="submit" className="w-full bg-gradient-primary hover:opacity-90" disabled={isSubmitting}>
+                  <Button
+                    type="submit"
+                    size="lg"
+                    className="w-full bg-gradient-primary hover:opacity-90"
+                    disabled={isSubmitting}
+                  >
                     {isSubmitting ? (
-                      "Sending..."
+                      "Sending Message..."
                     ) : (
                       <>
                         <Send className="mr-2 h-4 w-4" />
@@ -211,95 +325,38 @@ const Contact = () => {
                       </>
                     )}
                   </Button>
+
+                  <p className="text-xs text-muted-foreground text-center">
+                    By submitting this form, you agree to our privacy policy. We'll never share your information with
+                    third parties.
+                  </p>
                 </form>
               </CardContent>
             </Card>
-
-            {/* Additional Contact Options */}
-            <div className="space-y-6">
-              {/* WhatsApp Contact */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <MessageCircle className="h-5 w-5 text-green-600" />
-                    <span>WhatsApp Support</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground mb-4">
-                    Get instant support through WhatsApp. Click the button below to start a conversation with our
-                    support team.
-                  </p>
-                  <Button onClick={handleWhatsAppClick} className="w-full bg-green-600 hover:bg-green-700 text-white">
-                    <MessageCircle className="mr-2 h-4 w-4" />
-                    Chat on WhatsApp
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Google Maps Placeholder */}
-              <Card>
-                <CardContent className="p-0">
-                  <div className="aspect-[4/3] bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="text-6xl mb-4">🗺️</div>
-                      <p className="text-lg font-medium">Google Maps Integration</p>
-                      <p className="text-muted-foreground">Coming Soon</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* FAQ */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Frequently Asked Questions</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <h4 className="font-medium mb-2">How quickly do you respond?</h4>
-                    <p className="text-sm text-muted-foreground">
-                      We typically respond to all inquiries within 24 hours during business days.
-                    </p>
-                  </div>
-                  <div>
-                    <h4 className="font-medium mb-2">Do you offer consultations?</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Yes! We offer free consultation calls to discuss your specific IT needs.
-                    </p>
-                  </div>
-                  <div>
-                    <h4 className="font-medium mb-2">What information should I include?</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Please include as much detail as possible about your requirements and timeline.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
           </div>
         </div>
-      </section>
 
-      {/* CTA Section */}
-      <section className="py-16 bg-muted/50">
-        <div className="container px-4">
-          <div className="text-center max-w-3xl mx-auto">
-            <h2 className="text-3xl font-bold mb-4">Ready to Start Your Project?</h2>
-            <p className="text-lg text-muted-foreground mb-8">
-              Don't wait! Contact us today and let's discuss how we can help bring your IT vision to life.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" className="bg-gradient-primary hover:opacity-90">
-                Schedule a Call
-              </Button>
-              <Button size="lg" variant="outline">
-                View Our Services
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
+        {/* Map Section */}
+        <section className="mt-16">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-2xl">Our Location</CardTitle>
+              <p className="text-muted-foreground">
+                Visit our office in Lagos, Nigeria for in-person consultations and support.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center">
+                <div className="text-center">
+                  <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">Interactive map integration coming soon</p>
+                  <p className="text-sm text-muted-foreground mt-2">Lagos, Nigeria - West Africa</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+      </div>
     </Layout>
   )
 }

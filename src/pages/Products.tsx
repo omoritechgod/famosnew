@@ -1,446 +1,580 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
 import Layout from "@/components/layout/Layout"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Star, Heart, ShoppingCart, Grid3X3, List, Search } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Search, ShoppingCart, Star, SortAsc, SortDesc, Eye, ChevronLeft, ChevronRight } from 'lucide-react'
 import ProductCategories from "@/components/products/ProductCategories"
-import QuoteRequestBanner from "@/components/products/QuoteRequestBanner"
+import { useQuote } from "@/contexts/QuoteContext"
+import { toast } from "sonner"
+import { formatCurrency } from "@/utils/formatters"
 
 interface Product {
   id: number
   name: string
   description: string
-  price: number
-  originalPrice?: number
-  images: string[]
+  price: string
   category: string
-  availability: boolean
-  features: string[]
-  rating: number
-  reviews_count: number
   brand: string
   model: string
-  specifications: Record<string, string>
+  specifications: string[]
+  features: string[]
+  images: string[]
+  availability: boolean
+  featured: boolean
 }
 
 const Products = () => {
-  const [selectedCategory, setSelectedCategory] = useState<string>("")
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
-  const [searchQuery, setSearchQuery] = useState("")
+  const navigate = useNavigate()
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState("")
   const [sortBy, setSortBy] = useState("name")
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 10000])
-  const [showFilters, setShowFilters] = useState(false)
+  const [sortOrder, setSortOrder] = useState("asc")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
+  const [showViewDialog, setShowViewDialog] = useState(false)
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const { addToQuote } = useQuote()
 
-  // Mock products data
-  const products: Product[] = [
-    {
-      id: 1,
-      name: "Lenovo ThinkPad T14 AMD Ryzen 7 PRO 8840U Laptop",
-      description: '35.6 cm (14") WUXGA 16 GB DDR5-SDRAM 512 GB SSD Wi-Fi 6E (802.11ax) Windows 11 Pro Black',
-      price: 1299,
-      originalPrice: 1499,
-      images: ["/placeholder.svg?height=300&width=400"],
-      category: "Computing",
-      availability: true,
-      features: ["AMD Ryzen 7 PRO", "16GB DDR5 RAM", "512GB SSD", "Wi-Fi 6E", "Windows 11 Pro"],
-      rating: 4.8,
-      reviews_count: 124,
-      brand: "Lenovo",
-      model: "ThinkPad T14",
-      specifications: {
-        Processor: "AMD Ryzen 7 PRO 8840U",
-        RAM: "16GB DDR5",
-        Storage: "512GB SSD",
-        Display: '14" WUXGA',
-        OS: "Windows 11 Pro",
-      },
-    },
-    {
-      id: 2,
-      name: "HP ProLiant DL380 Gen10 Plus Server",
-      description: "2U rack server with Intel Xeon processors, enterprise-grade performance and reliability",
-      price: 3299,
-      images: ["/placeholder.svg?height=300&width=400"],
-      category: "Computing",
-      availability: true,
-      features: ["Intel Xeon Processor", "32GB RAM", "2TB Storage", "Redundant PSU", "iLO Management"],
-      rating: 4.9,
-      reviews_count: 89,
-      brand: "HP",
-      model: "ProLiant DL380 Gen10 Plus",
-      specifications: {
-        "Form Factor": "2U Rack",
-        Processor: "Intel Xeon",
-        RAM: "32GB DDR4",
-        Storage: "2TB HDD",
-        Management: "iLO 5",
-      },
-    },
-    {
-      id: 3,
-      name: "Cisco Catalyst 9300 Series Switch",
-      description: "48-port Gigabit Ethernet switch with advanced security and management features",
-      price: 2199,
-      images: ["/placeholder.svg?height=300&width=400"],
-      category: "Networking",
-      availability: true,
-      features: ["48 Gigabit Ports", "PoE+", "Stacking", "Advanced Security", "Cloud Management"],
-      rating: 4.7,
-      reviews_count: 67,
-      brand: "Cisco",
-      model: "Catalyst 9300",
-      specifications: {
-        Ports: "48 x Gigabit Ethernet",
-        PoE: "PoE+ Support",
-        Stacking: "Up to 8 units",
-        Management: "Cisco DNA Center",
-        Security: "MACsec, TrustSec",
-      },
-    },
-    {
-      id: 4,
-      name: "Canon EOS R6 Mark II Digital Camera",
-      description: "Professional mirrorless camera with 24.2MP sensor and advanced video capabilities",
-      price: 2499,
-      images: ["/placeholder.svg?height=300&width=400"],
-      category: "Sound and Vision",
-      availability: true,
-      features: ["24.2MP Sensor", "4K Video", "In-Body Stabilization", "Dual Card Slots", "Weather Sealed"],
-      rating: 4.9,
-      reviews_count: 156,
-      brand: "Canon",
-      model: "EOS R6 Mark II",
-      specifications: {
-        Sensor: "24.2MP Full Frame",
-        Video: "4K 60p",
-        Stabilization: "In-Body IS",
-        Autofocus: "Dual Pixel CMOS AF II",
-        Storage: "Dual SD Cards",
-      },
-    },
-    {
-      id: 5,
-      name: "Synology DiskStation DS920+ NAS",
-      description: "4-bay network attached storage with powerful performance for home and business",
-      price: 549,
-      images: ["/placeholder.svg?height=300&width=400"],
-      category: "Storage",
-      availability: true,
-      features: ["4-Bay Design", "Intel Celeron J4125", "4GB RAM", "2x M.2 Slots", "Plex Support"],
-      rating: 4.8,
-      reviews_count: 203,
-      brand: "Synology",
-      model: "DS920+",
-      specifications: {
-        Bays: '4 x 3.5" SATA',
-        Processor: "Intel Celeron J4125",
-        RAM: "4GB DDR4",
-        Cache: "2 x M.2 2280 slots",
-        Network: "2 x Gigabit",
-      },
-    },
-    {
-      id: 6,
-      name: "Microsoft Surface Pro 9",
-      description: "Versatile 2-in-1 laptop with Intel 12th Gen processors and all-day battery life",
-      price: 1099,
-      images: ["/placeholder.svg?height=300&width=400"],
-      category: "Computing",
-      availability: true,
-      features: ["Intel 12th Gen", '13" PixelSense', "All-day Battery", "Windows 11", "Type Cover Ready"],
-      rating: 4.6,
-      reviews_count: 178,
-      brand: "Microsoft",
-      model: "Surface Pro 9",
-      specifications: {
-        Processor: "Intel 12th Gen",
-        Display: '13" PixelSense',
-        RAM: "8GB LPDDR5",
-        Storage: "256GB SSD",
-        OS: "Windows 11",
-      },
-    },
-  ]
+  useEffect(() => {
+    fetchProducts()
+  }, [searchTerm, selectedCategory, sortBy, sortOrder, currentPage])
 
-  const filteredProducts = products.filter((product) => {
-    const matchesCategory =
-      !selectedCategory ||
-      product.category.toLowerCase().includes(selectedCategory.toLowerCase()) ||
-      selectedCategory.toLowerCase().includes(product.category.toLowerCase())
+  const fetchProducts = async () => {
+    setLoading(true)
+    try {
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        per_page: "12",
+        sort_by: sortBy,
+        sort_order: sortOrder,
+      })
 
-    const matchesSearch =
-      !searchQuery ||
-      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.brand.toLowerCase().includes(searchQuery.toLowerCase())
+      if (searchTerm) params.append("search", searchTerm)
+      if (selectedCategory) params.append("category", selectedCategory)
 
-    const matchesPrice = product.price >= priceRange[0] && product.price <= priceRange[1]
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api"}/products?${params}`
+      )
 
-    return matchesCategory && matchesSearch && matchesPrice
-  })
-
-  const sortedProducts = [...filteredProducts].sort((a, b) => {
-    switch (sortBy) {
-      case "price-low":
-        return a.price - b.price
-      case "price-high":
-        return b.price - a.price
-      case "rating":
-        return b.rating - a.rating
-      case "name":
-      default:
-        return a.name.localeCompare(b.name)
+      if (response.ok) {
+        const data = await response.json()
+        setProducts(data.products || data.data || [])
+        setTotalPages(data.last_page || Math.ceil((data.total || data.length) / 12))
+      } else {
+        console.error("Failed to fetch products")
+        toast.error("Failed to fetch products")
+      }
+    } catch (error) {
+      console.error("Failed to fetch products:", error)
+      toast.error("Failed to fetch products")
+    } finally {
+      setLoading(false)
     }
-  })
+  }
+
+  const handleAddToQuote = (product: Product) => {
+    // Add to quote context for the floating button
+    addToQuote({
+      id: product.id,
+      name: product.name,
+      price: parseFloat(product.price),
+      category: product.category,
+      brand: product.brand,
+      model: product.model,
+      image: product.images[0] || "/placeholder.svg",
+      quantity: 1,
+    })
+
+    // Navigate to quote request page with product data
+    navigate('/quote-request', {
+      state: {
+        selectedProduct: {
+          id: product.id,
+          name: product.name,
+          description: product.description,
+          price: product.price,
+          category: product.category,
+          brand: product.brand,
+          model: product.model,
+          code: `${product.brand}-${product.model}`.toUpperCase()
+        }
+      }
+    })
+
+    toast.success(`Redirecting to quote request for ${product.name}`)
+  }
+
+  const handleViewProduct = (product: Product) => {
+    setSelectedProduct(product)
+    setCurrentImageIndex(0)
+    setShowViewDialog(true)
+  }
+
+  const handleSearch = (value: string) => {
+    setSearchTerm(value)
+    setCurrentPage(1)
+  }
+
+  const handleCategoryChange = (value: string) => {
+    setSelectedCategory(value)
+    setCurrentPage(1)
+  }
+
+  const handleSortChange = (value: string) => {
+    setSortBy(value)
+    setCurrentPage(1)
+  }
+
+  const toggleSortOrder = () => {
+    setSortOrder(prev => prev === "asc" ? "desc" : "asc")
+    setCurrentPage(1)
+  }
+
+  const nextImage = () => {
+    if (selectedProduct && selectedProduct.images.length > 1) {
+      setCurrentImageIndex((prev) => (prev + 1) % selectedProduct.images.length)
+    }
+  }
+
+  const prevImage = () => {
+    if (selectedProduct && selectedProduct.images.length > 1) {
+      setCurrentImageIndex((prev) => (prev - 1 + selectedProduct.images.length) % selectedProduct.images.length)
+    }
+  }
+
+  // Group products by category
+  const productsByCategory = products.reduce((acc, product) => {
+    if (!acc[product.category]) {
+      acc[product.category] = []
+    }
+    acc[product.category].push(product)
+    return acc
+  }, {} as Record<string, Product[]>)
 
   return (
     <Layout>
-      {/* Hero Section */}
-      <section className="bg-gradient-hero text-white py-12">
-        <div className="container px-4">
-          <div className="text-center max-w-3xl mx-auto">
-            <h1 className="text-4xl md:text-5xl font-bold mb-6">IT Products & Solutions</h1>
-            <p className="text-xl text-white/80">
-              Discover our comprehensive range of enterprise-grade IT hardware, software, and networking solutions.
+      <div className="min-h-screen bg-gray-50">
+        {/* Hero Section */}
+        <section className="bg-gradient-primary text-white py-20">
+          <div className="container mx-auto px-4 text-center">
+            <h1 className="text-5xl font-bold mb-6">Our Products</h1>
+            <p className="text-xl max-w-2xl mx-auto">
+              Explore our comprehensive range of IT solutions and hardware products
             </p>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <div className="container px-4 py-8">
-        {/* Quote Request Banner */}
-        <QuoteRequestBanner />
-
-        <div className="grid lg:grid-cols-4 gap-8">
-          {/* Sidebar - Categories & Filters */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-4 space-y-6">
-              {/* Categories */}
-              <ProductCategories onCategorySelect={setSelectedCategory} selectedCategory={selectedCategory} />
-
-              {/* Price Filter */}
-              <Card>
-                <CardHeader>
-                  <h3 className="font-semibold">Price Range</h3>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center space-x-2">
-                      <Input
-                        type="number"
-                        placeholder="Min"
-                        value={priceRange[0]}
-                        onChange={(e) => setPriceRange([Number.parseInt(e.target.value) || 0, priceRange[1]])}
-                        className="w-20"
-                      />
-                      <span>-</span>
-                      <Input
-                        type="number"
-                        placeholder="Max"
-                        value={priceRange[1]}
-                        onChange={(e) => setPriceRange([priceRange[0], Number.parseInt(e.target.value) || 10000])}
-                        className="w-20"
-                      />
-                    </div>
-                    <Button variant="outline" size="sm" onClick={() => setPriceRange([0, 10000])} className="w-full">
-                      Reset
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-
-          {/* Main Content */}
-          <div className="lg:col-span-3">
-            {/* Search & Controls */}
-            <div className="flex flex-col md:flex-row gap-4 mb-6">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search products..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
+        <div className="container mx-auto px-4 py-8">
+          <div className="grid lg:grid-cols-4 gap-8">
+            {/* Sidebar - Categories */}
+            <div className="lg:col-span-1">
+              <div className="sticky top-4">
+                <ProductCategories 
+                  onCategorySelect={handleCategoryChange} 
+                  selectedCategory={selectedCategory}
                 />
               </div>
+            </div>
 
-              <div className="flex items-center space-x-2">
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue placeholder="Sort by" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="name">Name</SelectItem>
-                    <SelectItem value="price-low">Price: Low to High</SelectItem>
-                    <SelectItem value="price-high">Price: High to Low</SelectItem>
-                    <SelectItem value="rating">Rating</SelectItem>
-                  </SelectContent>
-                </Select>
+            {/* Main Content */}
+            <div className="lg:col-span-3">
+              {/* Filters Section */}
+              <div className="bg-white p-6 rounded-lg shadow-sm mb-8">
+                <div className="flex flex-col lg:flex-row gap-4 items-center">
+                  {/* Search */}
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                    <Input
+                      placeholder="Search products..."
+                      value={searchTerm}
+                      onChange={(e) => handleSearch(e.target.value)}
+                      className="pl-10 h-12"
+                    />
+                  </div>
 
-                <div className="flex border rounded-md">
-                  <Button
-                    variant={viewMode === "grid" ? "default" : "ghost"}
-                    size="sm"
-                    onClick={() => setViewMode("grid")}
-                    className="rounded-r-none"
-                  >
-                    <Grid3X3 className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant={viewMode === "list" ? "default" : "ghost"}
-                    size="sm"
-                    onClick={() => setViewMode("list")}
-                    className="rounded-l-none"
-                  >
-                    <List className="h-4 w-4" />
-                  </Button>
+                  {/* Sort */}
+                  <div className="flex gap-2">
+                    <Select value={sortBy} onValueChange={handleSortChange}>
+                      <SelectTrigger className="w-full lg:w-40 h-12">
+                        <SelectValue placeholder="Sort by" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="name">Name</SelectItem>
+                        <SelectItem value="price">Price</SelectItem>
+                        <SelectItem value="category">Category</SelectItem>
+                        <SelectItem value="created_at">Date Added</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-12 w-12"
+                      onClick={toggleSortOrder}
+                    >
+                      {sortOrder === "asc" ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />}
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Results Count */}
-            <div className="flex items-center justify-between mb-6">
-              <p className="text-muted-foreground">
-                Showing {sortedProducts.length} of {products.length} products
-                {selectedCategory && (
-                  <span className="ml-2">
-                    in <Badge variant="secondary">{selectedCategory}</Badge>
-                  </span>
-                )}
-              </p>
-            </div>
-
-            {/* Products Grid/List */}
-            <div className={`grid gap-6 ${viewMode === "grid" ? "md:grid-cols-2 xl:grid-cols-3" : "grid-cols-1"}`}>
-              {sortedProducts.map((product) => (
-                <Card key={product.id} className="group hover:shadow-card-hover transition-all duration-300">
-                  <CardHeader className="p-0">
-                    <div className="relative overflow-hidden rounded-t-lg">
-                      <div className="aspect-[4/3] bg-gradient-to-br from-primary/10 to-primary/5">
-                        <img
-                          src={product.images[0] || "/placeholder.svg"}
-                          alt={product.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      </div>
-                      <div className="absolute top-3 left-3">
-                        <Badge variant="secondary" className="bg-white/90 text-primary">
-                          {product.brand}
-                        </Badge>
-                      </div>
-                      <div className="absolute top-3 right-3">
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 bg-white/90 hover:bg-white">
-                          <Heart className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      {product.originalPrice && (
-                        <div className="absolute bottom-3 left-3">
-                          <Badge variant="destructive">Save ${product.originalPrice - product.price}</Badge>
-                        </div>
-                      )}
-                    </div>
-                  </CardHeader>
-
-                  <CardContent className="p-6">
-                    <div className="space-y-3">
-                      <h3 className="font-semibold text-lg line-clamp-2">{product.name}</h3>
-                      <p className="text-muted-foreground text-sm line-clamp-2">{product.description}</p>
-
-                      <div className="flex items-center space-x-2">
-                        <div className="flex items-center">
-                          {[...Array(5)].map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`h-4 w-4 ${
-                                i < Math.floor(product.rating)
-                                  ? "text-yellow-400 fill-current"
-                                  : "text-muted-foreground/30"
-                              }`}
-                            />
-                          ))}
-                        </div>
-                        <span className="text-sm text-muted-foreground">
-                          {product.rating} ({product.reviews_count})
-                        </span>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-1">
-                          <div className="text-2xl font-bold text-primary">${product.price.toLocaleString()}</div>
-                          {product.originalPrice && (
-                            <div className="text-sm text-muted-foreground line-through">
-                              ${product.originalPrice.toLocaleString()}
+              {/* Products Display */}
+              {loading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {[...Array(9)].map((_, i) => (
+                    <Card key={i} className="overflow-hidden animate-pulse">
+                      <div className="h-48 bg-gray-300"></div>
+                      <CardContent className="p-4">
+                        <div className="h-4 bg-gray-300 rounded mb-2"></div>
+                        <div className="h-3 bg-gray-300 rounded mb-4"></div>
+                        <div className="h-6 bg-gray-300 rounded"></div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : products.length > 0 ? (
+                <>
+                  {/* Display products by category if no specific category is selected */}
+                  {!selectedCategory ? (
+                    <div className="space-y-12">
+                      {Object.entries(productsByCategory).map(([category, categoryProducts]) => (
+                        <div key={category}>
+                          <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-2xl font-bold text-gray-900">{category}</h2>
+                            <Badge variant="outline" className="text-sm">
+                              {categoryProducts.length} products
+                            </Badge>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {categoryProducts.slice(0, 6).map((product, index) => (
+                              <ProductCard
+                                key={product.id}
+                                product={product}
+                                index={index}
+                                onAddToQuote={handleAddToQuote}
+                                onViewProduct={handleViewProduct}
+                              />
+                            ))}
+                          </div>
+                          {categoryProducts.length > 6 && (
+                            <div className="text-center mt-6">
+                              <Button
+                                variant="outline"
+                                onClick={() => handleCategoryChange(category)}
+                              >
+                                View All {category} Products ({categoryProducts.length})
+                              </Button>
                             </div>
                           )}
                         </div>
-                        <Badge variant={product.availability ? "default" : "secondary"}>
-                          {product.availability ? "In Stock" : "Out of Stock"}
-                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    /* Display filtered products */
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {products.map((product, index) => (
+                          <ProductCard
+                            key={product.id}
+                            product={product}
+                            index={index}
+                            onAddToQuote={handleAddToQuote}
+                            onViewProduct={handleViewProduct}
+                          />
+                        ))}
                       </div>
 
-                      {/* Key Features */}
-                      <div className="space-y-2">
-                        <h4 className="text-sm font-medium">Key Features:</h4>
-                        <div className="flex flex-wrap gap-1">
-                          {product.features.slice(0, 3).map((feature, index) => (
-                            <Badge key={index} variant="outline" className="text-xs">
-                              {feature}
-                            </Badge>
-                          ))}
-                          {product.features.length > 3 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{product.features.length - 3} more
-                            </Badge>
-                          )}
+                      {/* Pagination */}
+                      {totalPages > 1 && (
+                        <div className="flex justify-center items-center space-x-2 mt-12">
+                          <Button
+                            variant="outline"
+                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                            disabled={currentPage === 1}
+                          >
+                            Previous
+                          </Button>
+                          
+                          <div className="flex space-x-1">
+                            {[...Array(Math.min(5, totalPages))].map((_, i) => {
+                              const pageNum = Math.max(1, Math.min(currentPage - 2 + i, totalPages - 4 + i))
+                              return (
+                                <Button
+                                  key={pageNum}
+                                  variant={currentPage === pageNum ? "default" : "outline"}
+                                  onClick={() => setCurrentPage(pageNum)}
+                                  className="w-10"
+                                >
+                                  {pageNum}
+                                </Button>
+                              )
+                            })}
+                          </div>
+
+                          <Button
+                            variant="outline"
+                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                            disabled={currentPage === totalPages}
+                          >
+                            Next
+                          </Button>
                         </div>
-                      </div>
+                      )}
+                    </>
+                  )}
+                </>
+              ) : (
+                <div className="text-center py-12">
+                  <div className="max-w-md mx-auto">
+                    <div className="text-gray-400 mb-4">
+                      <Search className="h-16 w-16 mx-auto" />
                     </div>
-                  </CardContent>
-
-                  <CardFooter className="p-6 pt-0">
-                    <div className="flex space-x-2 w-full">
-                      <Button className="flex-1 bg-gradient-primary hover:opacity-90" disabled={!product.availability}>
-                        <ShoppingCart className="mr-2 h-4 w-4" />
-                        Add to Quote
-                      </Button>
-                      <Button variant="outline" size="default" className="px-3 bg-transparent">
-                        View Details
-                      </Button>
-                    </div>
-                  </CardFooter>
-                </Card>
-              ))}
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">No products found</h3>
+                    <p className="text-gray-500 mb-6">
+                      Try adjusting your search criteria or browse all categories
+                    </p>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setSearchTerm("")
+                        setSelectedCategory("")
+                        setCurrentPage(1)
+                      }}
+                    >
+                      Clear Filters
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
-
-            {/* No Results */}
-            {sortedProducts.length === 0 && (
-              <div className="text-center py-12">
-                <div className="text-6xl mb-4">🔍</div>
-                <h3 className="text-xl font-semibold mb-2">No products found</h3>
-                <p className="text-muted-foreground mb-4">
-                  Try adjusting your search criteria or browse our categories.
-                </p>
-                <Button
-                  onClick={() => {
-                    setSearchQuery("")
-                    setSelectedCategory("")
-                    setPriceRange([0, 10000])
-                  }}
-                >
-                  Clear Filters
-                </Button>
-              </div>
-            )}
           </div>
         </div>
+
+        {/* Product Details Modal */}
+        <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Product Details</DialogTitle>
+            </DialogHeader>
+            {selectedProduct && (
+              <div className="space-y-6">
+                {/* Image Gallery */}
+                <div className="relative">
+                  <img
+                    src={selectedProduct.images[currentImageIndex] || "/placeholder.svg?height=400&width=600"}
+                    alt={selectedProduct.name}
+                    className="w-full h-80 object-cover rounded-lg"
+                  />
+                  {selectedProduct.images.length > 1 && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white"
+                        onClick={prevImage}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white"
+                        onClick={nextImage}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
+                        {selectedProduct.images.map((_, index) => (
+                          <button
+                            key={index}
+                            className={`w-2 h-2 rounded-full ${
+                              index === currentImageIndex ? "bg-white" : "bg-white/50"
+                            }`}
+                            onClick={() => setCurrentImageIndex(index)}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Product Info */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div>
+                      <h2 className="text-2xl font-bold">{selectedProduct.name}</h2>
+                      <p className="text-gray-600 mt-2">{selectedProduct.description}</p>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <span className="text-sm font-medium text-gray-500">Category</span>
+                        <Badge variant="outline" className="mt-1 block w-fit">{selectedProduct.category}</Badge>
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium text-gray-500">Price</span>
+                        <p className="text-2xl font-bold text-primary">{formatCurrency(parseFloat(selectedProduct.price))}</p>
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium text-gray-500">Brand</span>
+                        <p className="text-lg">{selectedProduct.brand}</p>
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium text-gray-500">Model</span>
+                        <p className="text-lg">{selectedProduct.model}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-4">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm font-medium text-gray-500">Available:</span>
+                        <Badge variant={selectedProduct.availability ? "default" : "secondary"}>
+                          {selectedProduct.availability ? "Yes" : "No"}
+                        </Badge>
+                      </div>
+                      {selectedProduct.featured && (
+                        <div className="flex items-center space-x-2">
+                          <Badge className="bg-yellow-500 text-white">
+                            <Star className="h-3 w-3 mr-1" />
+                            Featured
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+
+                    <Button
+                      className="w-full bg-gradient-primary hover:opacity-90 transition-opacity"
+                      onClick={() => {
+                        handleAddToQuote(selectedProduct)
+                        setShowViewDialog(false)
+                      }}
+                      disabled={!selectedProduct.availability}
+                    >
+                      <ShoppingCart className="h-4 w-4 mr-2" />
+                      {selectedProduct.availability ? "Request Quote" : "Unavailable"}
+                    </Button>
+                  </div>
+
+                  <div className="space-y-4">
+                    {/* Features */}
+                    {selectedProduct.features.length > 0 && (
+                      <div>
+                        <span className="text-sm font-medium text-gray-500">Features</span>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {selectedProduct.features.map((feature, index) => (
+                            <Badge key={index} variant="secondary">{feature}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Specifications */}
+                    {selectedProduct.specifications.length > 0 && (
+                      <div>
+                        <span className="text-sm font-medium text-gray-500">Specifications</span>
+                        <div className="space-y-1 mt-2">
+                          {selectedProduct.specifications.map((spec, index) => (
+                            <p key={index} className="text-sm bg-gray-50 p-2 rounded">{spec}</p>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
+  )
+}
+
+// Product Card Component
+interface ProductCardProps {
+  product: Product
+  index: number
+  onAddToQuote: (product: Product) => void
+  onViewProduct: (product: Product) => void
+}
+
+const ProductCard = ({ product, index, onAddToQuote, onViewProduct }: ProductCardProps) => {
+  return (
+    <Card
+      className="group overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 animate-fade-in-up"
+      style={{ animationDelay: `${index * 0.05}s` }}
+    >
+      <div className="relative overflow-hidden">
+        <img
+          src={product.images[0] || "/placeholder.svg?height=200&width=300"}
+          alt={product.name}
+          className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300"
+        />
+        <div className="absolute top-2 left-2 flex gap-1">
+          {product.featured && (
+            <Badge className="bg-yellow-500 text-white">
+              <Star className="h-3 w-3 mr-1" />
+              Featured
+            </Badge>
+          )}
+          <Badge variant="outline" className="bg-white/90">
+            {product.category}
+          </Badge>
+        </div>
+        <div className="absolute top-2 right-2">
+          <Badge variant={product.availability ? "default" : "secondary"}>
+            {product.availability ? "Available" : "Out of Stock"}
+          </Badge>
+        </div>
+        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300"
+            onClick={() => onViewProduct(product)}
+          >
+            <Eye className="h-4 w-4 mr-2" />
+            View Details
+          </Button>
+        </div>
+      </div>
+
+      <CardContent className="p-4">
+        <div className="space-y-3">
+          <h3 className="text-lg font-semibold group-hover:text-primary transition-colors line-clamp-1">
+            {product.name}
+          </h3>
+          <p className="text-gray-600 text-sm line-clamp-2">
+            {product.description}
+          </p>
+          <div className="flex items-center justify-between">
+            <span className="text-xl font-bold text-primary">
+              {formatCurrency(parseFloat(product.price))}
+            </span>
+            <span className="text-xs text-gray-500">
+              {product.brand}
+            </span>
+          </div>
+          <Button
+            className="w-full bg-gradient-primary hover:opacity-90 transition-opacity"
+            onClick={() => onAddToQuote(product)}
+            disabled={!product.availability}
+          >
+            <ShoppingCart className="h-4 w-4 mr-2" />
+            {product.availability ? "Request Quote" : "Unavailable"}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 

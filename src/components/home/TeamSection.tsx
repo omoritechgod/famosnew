@@ -6,7 +6,7 @@ import team3 from '@/assets/team-3.jpg';
 const TeamSection = () => {
   const teamMembers = [
     {
-      name: "Songo Anabrabra",
+      name: "Gbadebo Kadiri",
       image: team1
     },
     {
@@ -14,7 +14,7 @@ const TeamSection = () => {
       image: team2
     },
     {
-      name: "Gbadebo Kadiri",
+      name: "Songo Anabrabra",
       image: team3
     }
   ];
