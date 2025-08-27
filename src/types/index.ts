@@ -88,9 +88,11 @@ export interface QuoteRequestItem {
   quote_request_id: number
   product_id: number | null
   product_code: string
-  product_description: string
+  product_description: string | null
   quantity: number
-  price: number
+  price: number | null
+  created_at: string
+  updated_at: string
 }
 
 // Updated to match the actual API response structure

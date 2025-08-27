@@ -5,13 +5,17 @@ import { useNavigate } from "react-router-dom"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Star, ShoppingCart, Eye } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Star, ShoppingCart, Eye, ChevronLeft, ChevronRight } from "lucide-react"
 import { productService } from "@/services/productService"
 import type { Product } from "@/types"
 
 const FeaturedProducts = () => {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
+  const [showViewDialog, setShowViewDialog] = useState(false)
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -48,6 +52,23 @@ const FeaturedProducts = () => {
     })
   }
 
+  const handleViewProduct = (product: Product) => {
+    setSelectedProduct(product)
+    setCurrentImageIndex(0)
+    setShowViewDialog(true)
+  }
+
+  const nextImage = () => {
+    if (selectedProduct && selectedProduct.images.length > 1) {
+      setCurrentImageIndex((prev) => (prev + 1) % selectedProduct.images.length)
+    }
+  }
+
+  const prevImage = () => {
+    if (selectedProduct && selectedProduct.images.length > 1) {
+      setCurrentImageIndex((prev) => (prev - 1 + selectedProduct.images.length) % selectedProduct.images.length)
+    }
+  }
   const handleViewAllProducts = () => {
     navigate("/products")
   }
@@ -151,7 +172,7 @@ const FeaturedProducts = () => {
                         <ShoppingCart className="h-4 w-4 mr-2" />
                         {product.availability ? "Request Quote" : "Unavailable"}
                       </Button>
-                      <Button variant="outline" size="icon">
+                      <Button variant="outline" size="icon" onClick={() => handleViewProduct(product)}>
                         <Eye className="h-4 w-4" />
                       </Button>
                     </div>
@@ -168,6 +189,142 @@ const FeaturedProducts = () => {
             </div>
           </>
         )}
+
+        {/* Product Details Modal */}
+        <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Product Details</DialogTitle>
+            </DialogHeader>
+            {selectedProduct && (
+              <div className="space-y-6">
+                {/* Image Gallery */}
+                <div className="relative">
+                  <img
+                    src={selectedProduct.images[currentImageIndex] || "/placeholder.svg?height=400&width=600"}
+                    alt={selectedProduct.name}
+                    className="w-full h-80 object-cover rounded-lg"
+                  />
+                  {selectedProduct.images.length > 1 && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white"
+                        onClick={prevImage}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white"
+                        onClick={nextImage}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
+                        {selectedProduct.images.map((_, index) => (
+                          <button
+                            key={index}
+                            className={`w-2 h-2 rounded-full ${
+                              index === currentImageIndex ? "bg-white" : "bg-white/50"
+                            }`}
+                            onClick={() => setCurrentImageIndex(index)}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Product Info */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div>
+                      <h2 className="text-2xl font-bold">{selectedProduct.name}</h2>
+                      <p className="text-gray-600 mt-2">{selectedProduct.description}</p>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <span className="text-sm font-medium text-gray-500">Category</span>
+                        <Badge variant="outline" className="mt-1 block w-fit">{selectedProduct.category}</Badge>
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium text-gray-500">Price</span>
+                        <p className="text-2xl font-bold text-primary">₦{Number(selectedProduct.price).toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium text-gray-500">Brand</span>
+                        <p className="text-lg">{selectedProduct.brand}</p>
+                      </div>
+                      <div>
+                        <span className="text-sm font-medium text-gray-500">Model</span>
+                        <p className="text-lg">{selectedProduct.model}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-4">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm font-medium text-gray-500">Available:</span>
+                        <Badge variant={selectedProduct.availability ? "default" : "secondary"}>
+                          {selectedProduct.availability ? "Yes" : "No"}
+                        </Badge>
+                      </div>
+                      {selectedProduct.featured && (
+                        <div className="flex items-center space-x-2">
+                          <Badge className="bg-yellow-500 text-white">
+                            <Star className="h-3 w-3 mr-1" />
+                            Featured
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+
+                    <Button
+                      className="w-full bg-gradient-primary hover:opacity-90"
+                      onClick={() => {
+                        handleRequestQuote(selectedProduct)
+                        setShowViewDialog(false)
+                      }}
+                      disabled={!selectedProduct.availability}
+                    >
+                      <ShoppingCart className="h-4 w-4 mr-2" />
+                      {selectedProduct.availability ? "Request Quote" : "Unavailable"}
+                    </Button>
+                  </div>
+
+                  <div className="space-y-4">
+                    {/* Features */}
+                    {selectedProduct.features && selectedProduct.features.length > 0 && (
+                      <div>
+                        <span className="text-sm font-medium text-gray-500">Features</span>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {selectedProduct.features.map((feature, index) => (
+                            <Badge key={index} variant="secondary">{feature}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Specifications */}
+                    {selectedProduct.specifications && selectedProduct.specifications.length > 0 && (
+                      <div>
+                        <span className="text-sm font-medium text-gray-500">Specifications</span>
+                        <div className="space-y-1 mt-2">
+                          {selectedProduct.specifications.map((spec, index) => (
+                            <p key={index} className="text-sm bg-gray-50 p-2 rounded">{spec}</p>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </section>
   )

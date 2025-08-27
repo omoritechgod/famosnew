@@ -32,8 +32,8 @@ const Footer = () => {
     setIsSubscribing(true)
 
     try {
-      // new API endpoint for newsletter subscription
-     const response = await apiService.post<{ success: boolean; message: string }>("/api/new-email", { email });
+      // Newsletter subscription endpoint
+      const response = await apiService.post<{ success: boolean; message: string }>("/api/subscribe", { email });
 
      if (response.success) {
         toast.success("Subscribed successfully!")

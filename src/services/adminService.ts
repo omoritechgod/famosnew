@@ -59,12 +59,8 @@ export const adminService = {
 
     const data = await response.json()
 
-    // Handle the response structure
-    if (data.success && data.data) {
-      return data.data
-    } else {
-      throw new Error("Invalid response structure")
-    }
+    // Handle the direct response structure (no wrapper)
+    return data
   },
 
   // Update quote status
@@ -169,9 +165,9 @@ export const adminService = {
     const data = await response.json()
     console.log("AdminService: Subscribers response data:", data)
 
-    // Handle the response structure
-    if (data.success && Array.isArray(data.data)) {
-      return data.data
+    // Handle the response structure with subscribers array
+    if (data.subscribers && Array.isArray(data.subscribers)) {
+      return data.subscribers
     } else if (Array.isArray(data)) {
       return data
     } else {
