@@ -195,7 +195,7 @@ const AdminQuotes = () => {
         {process.env.NODE_ENV === "development" && (
           <Card className="bg-gray-50">
             <CardContent className="p-4">
-              <p>
+              <p className="text-sm text-gray-600">
                 Debug: Found {quotes.length} quotes, filtered to {filteredQuotes.length}
               </p>
             </CardContent>
