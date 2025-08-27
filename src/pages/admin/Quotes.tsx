@@ -195,7 +195,7 @@ const AdminQuotes = () => {
         {process.env.NODE_ENV === "development" && (
           <Card className="bg-gray-50">
             <CardContent className="p-4">
-                    <SelectTrigger className="w-full md:w-40">
+              <p className="text-sm text-gray-600">
                 Debug: Found {quotes.length} quotes, filtered to {filteredQuotes.length}
               </p>
             </CardContent>
@@ -208,7 +208,7 @@ const AdminQuotes = () => {
             <Card>
               <CardContent className="p-12 text-center">
                 <FileText className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                    <SelectTrigger className="w-full md:w-40">
+                <h3 className="text-lg font-medium mb-2">No quote requests found</h3>
                 <p className="text-gray-600">
                   {searchTerm || statusFilter !== "all" || urgencyFilter !== "all"
                     ? "Try adjusting your filters"
@@ -257,7 +257,7 @@ const AdminQuotes = () => {
                     </div>
 
                     {/* Additional Message */}
-                    {quote.message && quote.message.trim() && (
+                    {quote.message && (
                       <div>
                         <h4 className="font-medium mb-2">Additional Requirements</h4>
                         <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">{quote.message}</p>
@@ -265,7 +265,7 @@ const AdminQuotes = () => {
                     )}
 
                     {/* Timestamps */}
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs text-gray-500 pt-2 border-t space-y-1 sm:space-y-0">
+                    <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t">
                       <span className="flex items-center">
                         <Calendar className="h-3 w-3 mr-1" />
                         Submitted: {new Date(quote.created_at).toLocaleDateString()} at{" "}
@@ -277,7 +277,7 @@ const AdminQuotes = () => {
                 </CardContent>
 
                 <CardContent className="pt-0">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-2 sm:space-y-0">
+                  <div className="flex justify-between items-center">
                     <div className="flex space-x-2">
                       <Button 
                         variant="outline" 
@@ -301,12 +301,12 @@ const AdminQuotes = () => {
                     </div>
 
                     <Select value={quote.status} onValueChange={(value) => updateQuoteStatus(quote.id, value)}>
-                      <SelectTrigger className="w-full sm:w-32">
+                      <SelectTrigger className="w-32">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="pending">Pending</SelectItem>
-                  {selectedQuote.message && selectedQuote.message.trim() && (
+                        <SelectItem value="in_progress">In Progress</SelectItem>
                         <SelectItem value="completed">Completed</SelectItem>
                         <SelectItem value="cancelled">Cancelled</SelectItem>
                       </SelectContent>
@@ -362,7 +362,7 @@ const AdminQuotes = () => {
                         </Badge>
                       </div>
                     </div>
-                    {selectedQuote.message && (
+                    {selectedQuote.message && selectedQuote.message.trim() && (
                       <div className="mt-4">
                         <p className="text-sm font-medium text-gray-500 mb-2">Additional Requirements</p>
                         <p className="text-sm bg-gray-50 p-3 rounded-lg">{selectedQuote.message}</p>
@@ -388,19 +388,19 @@ const AdminQuotes = () => {
                               </div>
                               <div className="md:col-span-2">
                                 <p className="text-sm font-medium text-gray-500">Description</p>
-                                <p className="text-base">{item.product_description}</p>
+                                <p className="text-base">{item.product_description || "No description provided"}</p>
                               </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                              <div>
                                 <p className="text-sm font-medium text-gray-500">Quantity</p>
                                 <p className="text-base">{item.quantity}</p>
-                            <div className="sm:col-span-1 lg:col-span-2">
-                            </div>
-                              <p className="text-base">{item.product_description || "No description provided"}</p>
-                              <div className="mt-2">
-                                <p className="text-sm font-medium text-gray-500">Current Price</p>
-                                <p className="text-base font-semibold">₦{item.price.toLocaleString()}</p>
+                                {item.price && item.price > 0 && (
+                                  <div className="mt-2">
+                                    <p className="text-sm font-medium text-gray-500">Current Price</p>
+                                    <p className="text-base font-semibold">₦{item.price.toLocaleString()}</p>
+                                  </div>
+                                )}
                               </div>
-                            )}
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -414,7 +414,7 @@ const AdminQuotes = () => {
                 <Card>
                   <CardContent className="p-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                          {item.price && item.price > 0 && (
+                      <div>
                         <p className="font-medium text-gray-500">Created At</p>
                         <p>{new Date(selectedQuote.created_at).toLocaleString()}</p>
                       </div>
